@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, onSnapshot, orderBy, deleteDoc } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
@@ -50,4 +50,8 @@ export const createNotification = async (plate, senderPhone, ownerUid) => {
     createdAt: new Date().toISOString(),
     status: 'unread'
   });
+};
+
+export const deleteTagRecord = async (docId) => {
+  await deleteDoc(doc(db, "tags", docId));
 };

@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { db, auth, getTagById, activateTag, createNotification } from './firebase';
+import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
 
 function App() {
@@ -29,6 +29,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/id/:tagId" element={<ScanTag />} />
           <Route path="/activate/:tagId" element={<ActivateTag />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
     </BrowserRouter>
@@ -403,6 +404,96 @@ function Dashboard() {
         </div>
       </div>
     </>
+  );
+}
+
+function Admin() {
+  const [authed, setAuthed] = useState(false);
+  const [pass, setPass] = useState('');
+  const [tags, setTags] = useState([]);
+  const [notifs, setNotifs] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (pass === '123456') {
+      setAuthed(true);
+      fetchData();
+    } else {
+      alert('Hatalı şifre!');
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    const tSnap = await getDocs(collection(db, 'tags'));
+    setTags(tSnap.docs.map(d => ({id: d.id, ...d.data()})));
+    
+    const nSnap = await getDocs(collection(db, 'notifications'));
+    setNotifs(nSnap.docs.map(d => ({id: d.id, ...d.data()})));
+    setLoading(false);
+  };
+
+  const handleDeleteTag = async (id) => {
+    if(window.confirm('Bu etiketi silmek istediğinize emin misiniz?')) {
+      await deleteTagRecord(id);
+      fetchData();
+    }
+  };
+
+  if (!authed) {
+    return (
+      <div className="glass-card" style={{textAlign: 'center', maxWidth: '400px', margin: '0 auto'}}>
+        <ShieldCheck size={48} color="var(--accent-color)" style={{marginBottom: '16px'}} />
+        <h2>Süper Admin Girişi</h2>
+        <form onSubmit={handleLogin} style={{marginTop: '20px'}}>
+          <input 
+            type="password" 
+            placeholder="Şifrenizi Girin" 
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            style={{marginBottom: '16px'}}
+          />
+          <button type="submit" className="btn btn-primary">Giriş Yap</button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card" style={{maxWidth: '800px', margin: '0 auto'}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+        <h2>Admin Paneli</h2>
+        <button className="btn btn-outline" onClick={() => setAuthed(false)} style={{padding: '6px 12px', fontSize: '0.8rem'}}>Çıkış</button>
+      </div>
+
+      <div style={{display: 'flex', gap: '16px', marginBottom: '32px'}}>
+        <div style={{flex: 1, background: 'rgba(59, 130, 246, 0.1)', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(59,130,246,0.2)'}}>
+          <h3 style={{fontSize: '2rem', color: 'var(--accent-color)', margin: 0}}>{tags.length}</h3>
+          <p style={{margin: '8px 0 0 0', color: '#cbd5e1', fontSize: '0.9rem'}}>Toplam Etiket</p>
+        </div>
+        <div style={{flex: 1, background: 'rgba(16, 185, 129, 0.1)', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(16,185,129,0.2)'}}>
+          <h3 style={{fontSize: '2rem', color: '#10b981', margin: 0}}>{notifs.length}</h3>
+          <p style={{margin: '8px 0 0 0', color: '#cbd5e1', fontSize: '0.9rem'}}>Toplam Çağrı</p>
+        </div>
+      </div>
+
+      <h3 style={{marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px'}}>Kayıtlı Plakalar</h3>
+      {loading ? <p>Yükleniyor...</p> : (
+        <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px'}}>
+          {tags.map(t => (
+            <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '8px'}}>
+              <div>
+                <strong style={{color: 'white'}}>{t.plate}</strong>
+                <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
+              </div>
+              <button onClick={() => handleDeleteTag(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil</button>
+            </div>
+          ))}
+          {tags.length === 0 && <p style={{color: '#94a3b8'}}>Henüz kayıtlı etiket yok.</p>}
+        </div>
+      )}
+    </div>
   );
 }
 
