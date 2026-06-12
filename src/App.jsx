@@ -193,6 +193,7 @@ function Dashboard() {
   const [editPlateValue, setEditPlateValue] = useState("");
   const [editPhoneValue, setEditPhoneValue] = useState("");
   const navigate = useNavigate();
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const audioRef = useRef(null);
   
   // İlk yüklemeyi takip etmek için (eski bildirimlerde ses çalmasın diye)
@@ -450,11 +451,7 @@ function Dashboard() {
                     WhatsApp
                   </a>
 
-                  <button onClick={async () => {
-                    if(window.confirm('Bu çağrıyı silmek istiyor musunuz?')) {
-                      await deleteNotificationRecord(notif.id);
-                    }
-                  }} className="btn btn-danger" style={{
+                  <button onClick={() => setDeleteConfirm(notif.id)} className="btn btn-danger" style={{
                     padding: '8px 12px',
                     fontSize: '0.85rem',
                     flex: '0',
@@ -466,6 +463,22 @@ function Dashboard() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999}}>
+          <div className="glass-card" style={{margin: '20px', textAlign: 'center', maxWidth: '300px'}}>
+            <h3 style={{color: '#ef4444', marginBottom: '12px'}}>Çağrıyı Sil</h3>
+            <p style={{fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '20px'}}>Bu çağrıyı geçmişten tamamen silmek istediğinize emin misiniz?</p>
+            <div style={{display: 'flex', gap: '12px', justifyContent: 'center'}}>
+              <button className="btn btn-outline" onClick={() => setDeleteConfirm(null)} style={{padding: '8px 16px', fontSize: '0.9rem', flex: 1}}>İptal</button>
+              <button className="btn btn-danger" onClick={async () => {
+                await deleteNotificationRecord(deleteConfirm);
+                setDeleteConfirm(null);
+              }} style={{padding: '8px 16px', fontSize: '0.9rem', flex: 1}}>Evet, Sil</button>
+            </div>
+          </div>
         </div>
       )}
       </div>
