@@ -1,0 +1,335 @@
+import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { db, auth, getTagById, activateTag, createNotification } from './firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+
+function App() {
+  // Giriş yapalım (Anonim de olsa bildirim atabilmek için)
+  useEffect(() => {
+    signInAnonymously(auth).catch(console.error);
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="container">
+        <header className="app-header">
+          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="app-logo">
+              <ShieldCheck size={28} color="var(--accent-color)" />
+              <div>Park<span>QR</span></div>
+            </div>
+          </Link>
+        </header>
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/id/:tagId" element={<ScanTag />} />
+          <Route path="/activate/:tagId" element={<ActivateTag />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+function Home() {
+  return (
+    <div className="glass-card" style={{textAlign: 'center'}}>
+      <h1>Gizli Numara, Güvenli İletişim</h1>
+      <p>Araç camınıza bırakacağınız QR kod ile telefon numaranızı paylaşmadan anında bildirim alın.</p>
+      
+      <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px'}}>
+        <Link to="/dashboard" className="btn btn-primary">
+          <BellRing size={20} />
+          Kontrol Paneli (Gelen Bildirimler)
+        </Link>
+        
+        <Link to="/activate/demo123" className="btn btn-outline">
+          Sistemi Test Et (Yeni Etiket)
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ScanTag() {
+  const { tagId } = useParams();
+  const navigate = useNavigate();
+  const [tag, setTag] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [phone, setPhone] = useState('');
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    getTagById(tagId).then(data => {
+      if (!data) {
+        // Tag yoksa aktifleştirme sayfasına yönlendir
+        navigate(`/activate/${tagId}`);
+      } else {
+        setTag(data);
+      }
+      setLoading(false);
+    });
+  }, [tagId, navigate]);
+
+  const handleSend = async () => {
+    if (phone.length < 10) return alert('Lütfen geçerli bir numara girin');
+    setSending(true);
+    await createNotification(tag.plate, phone, tag.ownerUid);
+    setSending(false);
+    setDone(true);
+  };
+
+  if (loading) return <div className="glass-card" style={{textAlign: 'center'}}><Loader2 className="spinner" size={32} /></div>;
+  
+  if (done) return (
+    <div className="glass-card" style={{textAlign: 'center'}}>
+      <div style={{fontSize: '48px', marginBottom: '16px'}}>✅</div>
+      <h2>Bildirim Gönderildi!</h2>
+      <p>Araç sahibinin telefonuna anında bildirim düştü. Lütfen aracın başında bekleyin.</p>
+    </div>
+  );
+
+  return (
+    <div className="glass-card">
+      <div className="badge badge-success" style={{marginBottom: '16px'}}>Araç Bulundu</div>
+      <h2><span style={{color:'var(--accent-color)'}}>{tag?.plate}</span> Sahibini Çağır</h2>
+      <p>Bu aracın çıkışınızı engellediğini veya bir sorun olduğunu mu düşünüyorsunuz?</p>
+      
+      <div className="form-group" style={{marginTop: '20px'}}>
+        <label>Size ulaşabilmesi için numaranız:</label>
+        <input 
+          type="tel" 
+          placeholder="05XX XXX XX XX" 
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <small style={{display: 'block', marginTop: '8px', color: 'var(--text-secondary)'}}>
+          * Numaranız sadece araç sahibine bildirilecektir.
+        </small>
+      </div>
+      
+      <button 
+        className="btn btn-danger" 
+        onClick={handleSend} 
+        disabled={sending}
+      >
+        {sending ? 'Gönderiliyor...' : 'Acil Bildirim Gönder'}
+      </button>
+    </div>
+  );
+}
+
+function ActivateTag() {
+  const { tagId } = useParams();
+  const navigate = useNavigate();
+  const [plate, setPlate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleActivate = async () => {
+    if (!plate) return alert('Lütfen plaka girin');
+    setSaving(true);
+    
+    // Anonim kullanıcı ile eşleştir
+    const uid = auth.currentUser ? auth.currentUser.uid : 'temp-user';
+    await activateTag(tagId, plate, uid);
+    
+    setSaving(false);
+    alert('Harika! QR kodunuz başarıyla plakanızla eşleşti.');
+    navigate(`/id/${tagId}`);
+  };
+
+  return (
+    <div className="glass-card">
+      <div className="badge" style={{background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', marginBottom: '16px'}}>Yeni Etiket</div>
+      <h2>QR Kodu Aktifleştir</h2>
+      <p>Bu QR kod henüz boş. Kendi aracınızla eşleştirmek için bilgilerinizi girin.</p>
+      
+      <div className="form-group" style={{marginTop: '20px'}}>
+        <label>Plakanız:</label>
+        <input 
+          type="text" 
+          placeholder="34 ABC 123" 
+          value={plate}
+          onChange={(e) => setPlate(e.target.value)}
+        />
+      </div>
+      
+      <button 
+        className="btn btn-primary" 
+        onClick={handleActivate}
+        disabled={saving}
+      >
+        {saving ? 'Kaydediliyor...' : 'Eşleştir ve Aktifleştir'}
+      </button>
+    </div>
+  );
+}
+
+function Dashboard() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const audioRef = useRef(null);
+  
+  // İlk yüklemeyi takip etmek için (eski bildirimlerde ses çalmasın diye)
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    // Alarm sesini yükle
+    audioRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+    
+    // Auth yüklenmesini bekle
+    const checkUser = setInterval(() => {
+      if (auth.currentUser) {
+        clearInterval(checkUser);
+        startListening(auth.currentUser.uid);
+      }
+    }, 500);
+
+    return () => clearInterval(checkUser);
+  }, []);
+
+  const startListening = (uid) => {
+    const q = query(
+      collection(db, 'notifications'), 
+      where('ownerUid', '==', uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Client-side sort
+      
+      setNotifications(notifs);
+      setLoading(false);
+
+      // Sadece yeni bir belge EKLENDİĞİNDE (ilk yükleme hariç) ses çal
+      if (!isFirstLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            audioRef.current.play().catch(e => console.log('Ses çalma izni yok:', e));
+            
+            // Titreşim ekle (Destekleyen telefonlar için)
+            if (navigator.vibrate) {
+              navigator.vibrate([500, 200, 500, 200, 500]);
+            }
+
+            // Basit bir browser alarm uyarısı da çıkarabiliriz (kullanıcı arka plandaysa dikkat çeksin diye)
+            if (Notification.permission === 'granted') {
+              new Notification('🚗 Aracınız İçin Acil Çağrı Var!');
+            }
+          }
+        });
+      }
+      isFirstLoad.current = false;
+    });
+
+    return () => unsubscribe();
+  };
+
+  // Kullanıcıdan ses ve bildirim izni istemek için bir buton
+  const requestPermissions = () => {
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+    // Sesi tetikle (Kullanıcı etkileşimi olmadan tarayıcı ses çalmayı engelleyebilir, bu bir test olur)
+    audioRef.current.play().then(() => audioRef.current.pause());
+  };
+
+  if (loading) return <div className="glass-card" style={{textAlign: 'center'}}><Loader2 className="spinner" size={32} /></div>;
+
+  return (
+    <div className="glass-card">
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+        <h2>Gelen Çağrılar</h2>
+        <div className="badge badge-success" style={{display: 'flex', gap: '6px', alignItems: 'center', cursor: 'pointer'}} onClick={requestPermissions}>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', background: 'currentColor', animation: 'pulse 2s infinite'}}></div>
+          Canlı Dinleniyor
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+      `}</style>
+
+      {notifications.length === 0 ? (
+        <p style={{textAlign: 'center', padding: '40px 0'}}>Henüz hiç çağrı almadınız.</p>
+      ) : (
+        <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          {notifications.map(notif => {
+            // Sadece sayıları al
+            const cleanPhone = notif.senderPhone.replace(/\D/g, '');
+            // WhatsApp Linki (Başına 90 ekleriz, Türkiye varsayımı)
+            const waLink = `https://wa.me/90${cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone}`;
+            
+            return (
+              <div key={notif.id} style={{
+                background: 'rgba(0,0,0,0.2)', 
+                padding: '16px', 
+                borderRadius: '12px',
+                borderLeft: '4px solid var(--accent-color)'
+              }}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
+                  <strong style={{color: 'white'}}>{notif.plate}</strong>
+                  <span style={{fontSize: '0.75rem', color: '#94a3b8'}}>
+                    {new Date(notif.createdAt).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}
+                  </span>
+                </div>
+                
+                <p style={{margin: '0 0 12px 0', fontSize: '0.9rem'}}>Numara: {notif.senderPhone}</p>
+                
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
+                  <a href={`tel:+90${cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone}`} className="btn" style={{
+                    background: 'rgba(255, 255, 255, 0.1)', 
+                    color: 'white', 
+                    padding: '8px 12px', 
+                    fontSize: '0.85rem',
+                    flex: '1',
+                    minWidth: '90px'
+                  }}>
+                    <Phone size={16} />
+                    Normal Ara
+                  </a>
+
+                  <a href={`tel:%2331%23${cleanPhone.startsWith('0') ? cleanPhone : '0' + cleanPhone}`} className="btn" style={{
+                    background: 'var(--accent-color)', 
+                    color: 'white', 
+                    padding: '8px 12px', 
+                    fontSize: '0.85rem',
+                    flex: '1',
+                    minWidth: '90px'
+                  }}>
+                    <Phone size={16} />
+                    Gizli Ara
+                  </a>
+
+                  <a href={waLink} target="_blank" rel="noreferrer" className="btn" style={{
+                    background: '#25D366', 
+                    color: 'white', 
+                    padding: '8px 12px', 
+                    fontSize: '0.85rem',
+                    flex: '1',
+                    minWidth: '90px'
+                  }}>
+                    <MessageCircle size={16} />
+                    WhatsApp
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
