@@ -443,6 +443,7 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [editPlateValue, setEditPlateValue] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -465,10 +466,9 @@ function Admin() {
   };
 
   const handleDeleteTag = async (id) => {
-    if(window.confirm('Bu etiketi silmek (boşa çıkarmak) istediğinize emin misiniz?')) {
-      await deleteTagRecord(id);
-      fetchData();
-    }
+    await deleteTagRecord(id);
+    setConfirmDelete(null);
+    fetchData();
   };
 
   const handleEditClick = (tag) => {
@@ -544,7 +544,15 @@ function Admin() {
                 {editingTag !== t.id && (
                   <button onClick={() => handleEditClick(t)} style={{background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Düzenle</button>
                 )}
-                <button onClick={() => handleDeleteTag(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil (Boşa Çıkar)</button>
+                {confirmDelete === t.id ? (
+                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                    <span style={{color: '#ef4444', fontSize: '0.8rem'}}>Emin misiniz?</span>
+                    <button onClick={() => handleDeleteTag(t.id)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>Evet</button>
+                    <button onClick={() => setConfirmDelete(null)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>İptal</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil (Boşa Çıkar)</button>
+                )}
               </div>
             </div>
           ))}
