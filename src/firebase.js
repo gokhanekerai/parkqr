@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, onSnapshot, orderBy, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { getAuth, signInAnonymously } from "firebase/auth";
+import { getMessaging, getToken, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBEmY5vau6HucxG-N0c3J4FeRg44fT1GMU",
@@ -14,6 +15,36 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+let messaging = null;
+
+const initMessaging = async () => {
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      messaging = getMessaging(app);
+    }
+  } catch (e) {
+    console.log("Messaging unsupported", e);
+  }
+};
+initMessaging();
+
+export const requestNotificationPermission = async (uid) => {
+  if (!messaging) return false;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const token = await getToken(messaging, { vapidKey: 'BCIYSZ6Aej1Bl-Hw4ps-ooZ7WZ6_shtS18mxXKO6tKxCilOBzZGqB8rz_PYh4adyWtigIezPqDLx_R_66A83MvE' });
+      if (token) {
+        await setDoc(doc(db, "users", uid), { fcmToken: token }, { merge: true });
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error("Token alınırken hata:", e);
+  }
+  return false;
+};
 
 // Yardımcı DB fonksiyonları
 export const getTagById = async (tagId) => {
@@ -44,13 +75,34 @@ export const activateTag = async (tagId, plate, uid, ownerPhone = "") => {
 };
 
 export const createNotification = async (plate, senderPhone, ownerUid) => {
-  await addDoc(collection(db, "notifications"), {
-    plate,
-    senderPhone,
-    ownerUid,
-    createdAt: new Date().toISOString(),
-    status: 'unread'
-  });
+  try {
+    // 1. Bildirimi Veritabanına Kaydet
+    await addDoc(collection(db, "notifications"), {
+      plate,
+      senderPhone,
+      ownerUid,
+      createdAt: new Date().toISOString()
+    });
+
+    // 2. Kullanıcının FCM (Push) Token'ını bul
+    const userDocRef = doc(db, "users", ownerUid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists() && userDoc.data().fcmToken) {
+      // 3. Vercel Backend'e Push İsteği Gönder
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: userDoc.data().fcmToken,
+          plate,
+          senderPhone
+        })
+      });
+    }
+  } catch (e) {
+    console.error("Bildirim oluşturma hatası:", e);
+  }
 };
 
 export const deleteTagRecord = async (docId) => {

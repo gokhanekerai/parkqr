@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo } from './firebase';
+import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo, requestNotificationPermission } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -293,9 +293,28 @@ function Dashboard() {
     setEditingTag(null);
   };
 
+  const handleEnableNotifications = async () => {
+    const success = await requestNotificationPermission(auth.currentUser.uid);
+    if (success) {
+      alert("Harika! Artık arabanızın başına biri geldiğinde anında bildirim alacaksınız.");
+    } else {
+      alert("Bildirim izni alınamadı. Tarayıcı ayarlarından bildirimleri açtığınıza emin olun.");
+    }
+  };
+
   return (
     <>
       <div className="glass-card">
+        <div style={{background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px'}}>
+          <div>
+            <h3 style={{margin: '0 0 4px 0', fontSize: '1rem', color: '#fff'}}>🔔 Anında Bildirimler</h3>
+            <p style={{margin: 0, fontSize: '0.8rem', color: '#94a3b8'}}>Ekran kapalıyken bile telefonunuza bildirim gelsin.</p>
+          </div>
+          <button onClick={handleEnableNotifications} className="btn btn-primary" style={{padding: '8px 16px', fontSize: '0.9rem', minWidth: 'auto', background: '#3b82f6'}}>
+            Bildirimleri Aç
+          </button>
+        </div>
+
         <div style={{marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
           <h2>Kayıtlı Araçlarım</h2>
