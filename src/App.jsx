@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db, auth, getTagById, activateTag, createNotification } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { QRCodeSVG } from 'qrcode.react';
 
 function App() {
   // Giriş yapalım (Anonim de olsa bildirim atabilmek için)
@@ -171,7 +172,10 @@ function ActivateTag() {
 
 function Dashboard() {
   const [notifications, setNotifications] = useState([]);
+  const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showQR, setShowQR] = useState(null);
+  const navigate = useNavigate();
   const audioRef = useRef(null);
   
   // İlk yüklemeyi takip etmek için (eski bildirimlerde ses çalmasın diye)
@@ -198,7 +202,7 @@ function Dashboard() {
       where('ownerUid', '==', uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubNotif = onSnapshot(q, (snapshot) => {
       const notifs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -228,7 +232,19 @@ function Dashboard() {
       isFirstLoad.current = false;
     });
 
-    return () => unsubscribe();
+    const qTags = query(collection(db, 'tags'), where('ownerUid', '==', uid));
+    const unsubTags = onSnapshot(qTags, (snapshot) => {
+      const myTags = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTags(myTags);
+    });
+
+    return () => {
+      unsubNotif();
+      unsubTags();
+    };
   };
 
   // Kullanıcıdan ses ve bildirim izni istemek için bir buton
@@ -242,8 +258,51 @@ function Dashboard() {
 
   if (loading) return <div className="glass-card" style={{textAlign: 'center'}}><Loader2 className="spinner" size={32} /></div>;
 
+  const handleCreateNewTag = () => {
+    const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    navigate(`/activate/${randomId}`);
+  };
+
   return (
     <div className="glass-card">
+      <div style={{marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+          <h2>Kayıtlı Araçlarım</h2>
+          <button className="btn btn-outline" onClick={handleCreateNewTag} style={{padding: '8px 12px', fontSize: '0.85rem'}}>
+            + Yeni Ekle
+          </button>
+        </div>
+        
+        {tags.length === 0 ? (
+          <p style={{color: '#94a3b8', fontSize: '0.9rem'}}>Henüz eşleştirilmiş bir etiketiniz yok.</p>
+        ) : (
+          <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+            {tags.map(tag => (
+              <div key={tag.id} style={{
+                background: 'rgba(0,0,0,0.2)', 
+                padding: '16px', 
+                borderRadius: '12px',
+                borderLeft: '4px solid #3b82f6'
+              }}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                  <button className="btn btn-primary" style={{padding: '6px 12px', fontSize: '0.8rem', minWidth: 'auto'}} onClick={() => setShowQR(showQR === tag.tagId ? null : tag.tagId)}>
+                    {showQR === tag.tagId ? 'Gizle' : 'QR Göster'}
+                  </button>
+                </div>
+                
+                {showQR === tag.tagId && (
+                  <div style={{marginTop: '16px', padding: '16px', background: 'white', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                    <QRCodeSVG value={`https://parkqr-nine.vercel.app/id/${tag.tagId}`} size={200} />
+                    <p style={{color: '#333', marginTop: '12px', fontWeight: 'bold', textAlign: 'center', margin: '12px 0 0 0'}}>Bu karekodu başka bir telefonla okutun</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
         <h2>Gelen Çağrılar</h2>
         <div className="badge badge-success" style={{display: 'flex', gap: '6px', alignItems: 'center', cursor: 'pointer'}} onClick={requestPermissions}>
