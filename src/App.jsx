@@ -177,6 +177,8 @@ function Dashboard() {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showQR, setShowQR] = useState(null);
+  const [editingTag, setEditingTag] = useState(null);
+  const [editPlateValue, setEditPlateValue] = useState("");
   const navigate = useNavigate();
   const audioRef = useRef(null);
   
@@ -265,11 +267,16 @@ function Dashboard() {
     navigate(`/activate/${randomId}`);
   };
 
-  const handleEditPlate = async (tag) => {
-    const newPlate = window.prompt("Yeni plakayı girin:", tag.plate);
-    if (newPlate && newPlate.trim() !== "" && newPlate !== tag.plate) {
-      await updateTagPlate(tag.id, newPlate.trim().toUpperCase());
+  const handleEditPlateClick = (tag) => {
+    setEditingTag(tag.id);
+    setEditPlateValue(tag.plate);
+  };
+
+  const handleSavePlate = async (tagId) => {
+    if (editPlateValue.trim() !== "") {
+      await updateTagPlate(tagId, editPlateValue.trim().toUpperCase());
     }
+    setEditingTag(null);
   };
 
   return (
@@ -296,8 +303,18 @@ function Dashboard() {
               }}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                    <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
-                    <button onClick={() => handleEditPlate(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                    {editingTag === tag.id ? (
+                      <div style={{display: 'flex', gap: '8px'}}>
+                        <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '100px'}} />
+                        <button onClick={() => handleSavePlate(tag.id)} style={{background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>Kaydet</button>
+                        <button onClick={() => setEditingTag(null)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>İptal</button>
+                      </div>
+                    ) : (
+                      <>
+                        <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                        <button onClick={() => handleEditPlateClick(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                      </>
+                    )}
                   </div>
                   <button className="btn btn-primary" style={{padding: '6px 12px', fontSize: '0.8rem', minWidth: 'auto'}} onClick={() => setShowQR(showQR === tag.tagId ? null : tag.tagId)}>
                     {showQR === tag.tagId ? 'Gizle' : 'QR Göster'}
@@ -424,6 +441,8 @@ function Admin() {
   const [tags, setTags] = useState([]);
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editingTag, setEditingTag] = useState(null);
+  const [editPlateValue, setEditPlateValue] = useState("");
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -452,12 +471,17 @@ function Admin() {
     }
   };
 
-  const handleEditTag = async (tag) => {
-    const newPlate = window.prompt("Yeni plakayı girin:", tag.plate);
-    if (newPlate && newPlate.trim() !== "" && newPlate !== tag.plate) {
-      await updateTagPlate(tag.id, newPlate.trim().toUpperCase());
+  const handleEditClick = (tag) => {
+    setEditingTag(tag.id);
+    setEditPlateValue(tag.plate);
+  };
+
+  const handleSavePlate = async (tagId) => {
+    if (editPlateValue.trim() !== "") {
+      await updateTagPlate(tagId, editPlateValue.trim().toUpperCase());
       fetchData();
     }
+    setEditingTag(null);
   };
 
   if (!authed) {
@@ -503,11 +527,23 @@ function Admin() {
           {tags.map(t => (
             <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '8px'}}>
               <div>
-                <strong style={{color: 'white'}}>{t.plate}</strong>
-                <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
+                {editingTag === t.id ? (
+                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                    <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '100px'}} />
+                    <button onClick={() => handleSavePlate(t.id)} style={{background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>Kaydet</button>
+                    <button onClick={() => setEditingTag(null)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>İptal</button>
+                  </div>
+                ) : (
+                  <>
+                    <strong style={{color: 'white'}}>{t.plate}</strong>
+                    <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
+                  </>
+                )}
               </div>
               <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <button onClick={() => handleEditTag(t)} style={{background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Düzenle</button>
+                {editingTag !== t.id && (
+                  <button onClick={() => handleEditClick(t)} style={{background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Düzenle</button>
+                )}
                 <button onClick={() => handleDeleteTag(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil (Boşa Çıkar)</button>
               </div>
             </div>
