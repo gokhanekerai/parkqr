@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
+import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone, PhoneOff, MessageSquare, Trash2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo, requestNotificationPermission } from './firebase';
+import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo, requestNotificationPermission, deleteNotificationRecord } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -434,21 +434,34 @@ function Dashboard() {
                     flex: '1',
                     minWidth: '90px'
                   }}>
-                    <Phone size={16} />
+                    <PhoneOff size={16} />
                     Gizli Ara
                   </a>
 
                   <a href={waLink} target="_blank" rel="noreferrer" className="btn" style={{
-                    background: '#25D366', 
+                    background: '#22c55e', 
                     color: 'white', 
                     padding: '8px 12px', 
                     fontSize: '0.85rem',
                     flex: '1',
                     minWidth: '90px'
                   }}>
-                    <MessageCircle size={16} />
+                    <MessageSquare size={16} />
                     WhatsApp
                   </a>
+
+                  <button onClick={async () => {
+                    if(window.confirm('Bu çağrıyı silmek istiyor musunuz?')) {
+                      await deleteNotificationRecord(notif.id);
+                    }
+                  }} className="btn btn-danger" style={{
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    flex: '0',
+                    minWidth: 'auto'
+                  }}>
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             );

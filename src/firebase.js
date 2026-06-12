@@ -115,3 +115,7 @@ export const updateTagInfo = async (docId, newPlate, newPhone) => {
     ownerPhone: newPhone || ""
   });
 };
+
+export const deleteNotificationRecord = async (docId) => {
+  await deleteDoc(doc(db, "notifications", docId));
+};
