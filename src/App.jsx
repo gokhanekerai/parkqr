@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone, PhoneOff, MessageSquare, Trash2, Edit2, Plus, Check, X, LogOut, ShieldAlert, Award, Download, Volume2, Sparkles } from 'lucide-react';
+import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone, PhoneOff, MessageSquare, Trash2, Edit2, Plus, Check, X, LogOut, ShieldAlert, Award, Download, Volume2, Sparkles, Printer } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo, requestNotificationPermission, deleteNotificationRecord } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -543,6 +543,163 @@ function Dashboard() {
     link.click();
   };
 
+  const printQRCard = (tag) => {
+    const printWindow = window.open('', '_blank');
+    const svgEl = document.querySelector(`.qr-box-container-${tag.tagId} svg`);
+    const svgHtml = svgEl ? svgEl.outerHTML : '';
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>ParkQR - \${tag.plate}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+            body {
+              margin: 0;
+              padding: 40px;
+              font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              background: #ffffff;
+            }
+            .print-card {
+              width: 440px;
+              border: 4px double #cbd5e1;
+              padding: 40px 30px;
+              text-align: center;
+              position: relative;
+              background: #ffffff;
+              box-sizing: border-box;
+            }
+            .top-bar {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 12px;
+              background: #1d4ed8;
+            }
+            .title {
+              font-size: 28px;
+              font-weight: 800;
+              color: #0f172a;
+              margin-bottom: 8px;
+              letter-spacing: -0.03em;
+            }
+            .subtitle {
+              font-size: 14px;
+              color: #64748b;
+              margin-bottom: 30px;
+            }
+            .qr-box {
+              display: inline-flex;
+              padding: 16px;
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              margin-bottom: 30px;
+            }
+            .qr-box svg {
+              width: 200px;
+              height: 200px;
+            }
+            .plate-badge {
+              display: inline-flex;
+              align-items: center;
+              background: #ffffff;
+              border: 3px solid #000000;
+              border-radius: 8px;
+              overflow: hidden;
+              font-weight: 800;
+              font-size: 32px;
+              letter-spacing: 1.5px;
+              color: #000000;
+              height: 64px;
+              margin-bottom: 40px;
+              box-sizing: border-box;
+            }
+            .plate-badge-tr {
+              background: #1d4ed8;
+              color: #ffffff;
+              font-size: 14px;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100%;
+              width: 40px;
+              flex-shrink: 0;
+            }
+            .plate-badge-text {
+              padding: 0 20px;
+              text-transform: uppercase;
+            }
+            .divider {
+              border: none;
+              border-top: 2px dashed #e2e8f0;
+              margin-bottom: 24px;
+            }
+            .privacy-title {
+              font-size: 13px;
+              font-weight: 700;
+              color: #334155;
+              letter-spacing: 0.05em;
+              margin-bottom: 8px;
+            }
+            .privacy-desc {
+              font-size: 11px;
+              color: #64748b;
+              line-height: 1.5;
+              max-width: 320px;
+              margin: 0 auto;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .print-card {
+                border: 4px double #000000;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-card">
+            <div class="top-bar"></div>
+            <div class="title">🅿 ParkQR</div>
+            <div class="subtitle">Araç sahibine ulaşmak için bu kodu taratın</div>
+            
+            <div class="qr-box">
+              ${svgHtml}
+            </div>
+            
+            <div>
+              <div class="plate-badge">
+                <div class="plate-badge-tr">TR</div>
+                <div class="plate-badge-text">${tag.plate}</div>
+              </div>
+            </div>
+            
+            <hr class="divider" />
+            
+            <div class="privacy-title">🛡️ GİZLİ NUMARA İLE GÜVENLİ İLETİŞİM</div>
+            <div class="privacy-desc">
+              Telefon numaranız asla görünmez. ParkQR ile numaranız %100 güvence altındadır.
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) return <div className="glass-card" style={{ textAlign: 'center', padding: '48px' }}><Loader2 className="spinner" size={36} /></div>;
 
   const handleCreateNewTag = () => {
@@ -739,13 +896,20 @@ function Dashboard() {
                         Bu karekodu telefon kamerasıyla okutun
                       </p>
                       
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%', flexWrap: 'wrap' }}>
                         <button 
                           onClick={() => downloadQRCard(tag)} 
-                          className="btn btn-primary" 
-                          style={{ fontSize: '0.85rem', flex: 1, padding: '10px 14px', borderRadius: '10px', height: '40px', boxShadow: 'none' }}
+                          className="btn btn-outline" 
+                          style={{ fontSize: '0.85rem', flex: '1 1 140px', padding: '10px 14px', borderRadius: '10px', height: '40px', color: '#1f2937', borderColor: '#d1d5db', boxShadow: 'none' }}
                         >
-                          <Download size={16} /> Yazdırılabilir PNG İndir
+                          <Download size={16} /> Görsel İndir (PNG)
+                        </button>
+                        <button 
+                          onClick={() => printQRCard(tag)} 
+                          className="btn btn-primary" 
+                          style={{ fontSize: '0.85rem', flex: '1 1 140px', padding: '10px 14px', borderRadius: '10px', height: '40px', background: 'var(--accent-gradient)', boxShadow: 'none' }}
+                        >
+                          <Printer size={16} /> Yazdır / PDF Kaydet
                         </button>
                       </div>
                     </div>
