@@ -344,13 +344,14 @@ function Dashboard() {
                         <button onClick={() => setEditingTag(null)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>İptal</button>
                       </div>
                     ) : (
-                      <div style={{display: 'flex', flexDirection: 'column'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                          <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
-                          <button onClick={() => handleEditPlateClick(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                        <div style={{display: 'flex', flexDirection: 'column'}}>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                            <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                            <button onClick={() => handleEditPlateClick(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                          </div>
+                          <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>Tag ID: {tag.id}</span>
+                          {tag.ownerPhone && <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>Tel: {tag.ownerPhone}</span>}
                         </div>
-                        {tag.ownerPhone && <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>Tel: {tag.ownerPhone}</span>}
-                      </div>
                     )}
                   </div>
                   <button className="btn btn-primary" style={{padding: '6px 12px', fontSize: '0.8rem', minWidth: 'auto'}} onClick={() => setShowQR(showQR === tag.tagId ? null : tag.tagId)}>
