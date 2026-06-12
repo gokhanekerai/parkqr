@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { token, plate, senderPhone } = req.body;
+  const { token, plate, senderPhone, message } = req.body;
 
   if (!token) {
     return res.status(400).json({ error: 'FCM Token missing' });
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   const payload = {
     notification: {
       title: '🚨 Araç Çağrısı!',
-      body: `${plate} plakalı aracınız için çağrı var! İletişim: ${senderPhone || 'Bilinmiyor'}`,
+      body: `${plate} plakalı aracınız için çağrı var! ${message ? `Neden: ${message}. ` : ''}İletişim: ${senderPhone || 'Bilinmiyor'}`,
     }
   };
 

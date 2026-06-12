@@ -74,13 +74,14 @@ export const activateTag = async (tagId, plate, uid, ownerPhone = "") => {
   }
 };
 
-export const createNotification = async (plate, senderPhone, ownerUid) => {
+export const createNotification = async (plate, senderPhone, ownerUid, message = "") => {
   try {
     // 1. Bildirimi Veritabanına Kaydet
     await addDoc(collection(db, "notifications"), {
       plate,
       senderPhone,
       ownerUid,
+      message,
       createdAt: new Date().toISOString()
     });
 
@@ -96,7 +97,8 @@ export const createNotification = async (plate, senderPhone, ownerUid) => {
         body: JSON.stringify({
           token: userDoc.data().fcmToken,
           plate,
-          senderPhone
+          senderPhone,
+          message
         })
       });
     }

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone, PhoneOff, MessageSquare, Trash2, Edit2, Plus, Check, X, LogOut, ShieldAlert, Award } from 'lucide-react';
+import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone, PhoneOff, MessageSquare, Trash2, Edit2, Plus, Check, X, LogOut, ShieldAlert, Award, Download, Volume2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo, requestNotificationPermission, deleteNotificationRecord } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -67,6 +67,8 @@ function ScanTag() {
   const [tag, setTag] = useState(null);
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState('');
+  const [reason, setReason] = useState('🚗 Çıkışımı engelliyor');
+  const [customReason, setCustomReason] = useState('');
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -86,7 +88,8 @@ function ScanTag() {
   const handleSend = async () => {
     if (phone.length < 10) return alert('Lütfen geçerli bir numara girin');
     setSending(true);
-    await createNotification(tag.plate, phone, tag.ownerUid);
+    const selectedReason = reason.startsWith('💬') ? customReason.trim() : reason;
+    await createNotification(tag.plate, phone, tag.ownerUid, selectedReason || "Hızlı Çağrı");
     setSending(false);
     setDone(true);
   };
@@ -118,8 +121,51 @@ function ScanTag() {
           <div className="plate-badge-text" style={{ padding: '0 20px' }}>{tag?.plate}</div>
         </div>
       </div>
+
+      {/* Quick Message / Reason Selector */}
+      <div className="form-group" style={{ marginBottom: '20px' }}>
+        <label>Arama Sebebi:</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+          {[
+            { id: 'engelliyor', text: '🚗 Çıkışımı engelliyor' },
+            { id: 'farlar', text: '💡 Farlar açık kalmış' },
+            { id: 'alarm', text: '🚨 Alarm çalıyor' },
+            { id: 'other', text: '💬 Diğer' }
+          ].map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setReason(opt.text)}
+              className={`btn ${reason === opt.text || (opt.id === 'other' && reason.startsWith('💬')) ? 'btn-primary' : 'btn-outline'}`}
+              style={{
+                padding: '8px 14px',
+                fontSize: '0.85rem',
+                width: 'auto',
+                borderRadius: '20px',
+                height: '36px',
+                boxShadow: 'none'
+              }}
+            >
+              {opt.text}
+            </button>
+          ))}
+        </div>
+        
+        {(reason === '💬 Diğer' || reason.startsWith('💬')) && (
+          <input
+            type="text"
+            placeholder="Özel mesajınızı yazın..."
+            value={customReason}
+            onChange={(e) => {
+              setCustomReason(e.target.value);
+              setReason('💬 ' + e.target.value);
+            }}
+            style={{ marginTop: '8px', height: '44px' }}
+          />
+        )}
+      </div>
       
-      <div className="form-group" style={{ marginTop: '24px' }}>
+      <div className="form-group" style={{ marginTop: '20px' }}>
         <label>Size ulaşabilmesi için numaranız:</label>
         <input 
           type="tel" 
@@ -268,12 +314,24 @@ function Dashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const audioRef = useRef(null);
   
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  // Zil sesi state
+  const [alertSound, setAlertSound] = useState(localStorage.getItem('parkqr_alert_sound') || 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+  
+  const SOUNDS = [
+    { name: '🔊 Kısa Bip (Varsayılan)', url: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' },
+    { name: '🚗 Araç Kornası', url: 'https://actions.google.com/sounds/v1/impacts/horn_screech.ogg' },
+    { name: '🔔 Dijital Saat Alarmı', url: 'https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg' }
+  ];
+
   // İlk yüklemeyi takip etmek için (eski bildirimlerde ses çalmasın diye)
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    // Alarm sesini yükle
-    audioRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+    // Seçilen zil sesini yükle
+    audioRef.current = new Audio(alertSound);
     
     // Auth yüklenmesini bekle
     const checkUser = setInterval(() => {
@@ -283,8 +341,18 @@ function Dashboard() {
       }
     }, 500);
 
-    return () => clearInterval(checkUser);
-  }, []);
+    // PWA Install listener
+    const handleInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+
+    return () => {
+      clearInterval(checkUser);
+      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+    };
+  }, [alertSound]);
 
   const startListening = (uid) => {
     const q = query(
@@ -346,6 +414,135 @@ function Dashboard() {
     audioRef.current.play().then(() => audioRef.current.pause());
   };
 
+  const handleSoundChange = (url) => {
+    setAlertSound(url);
+    localStorage.setItem('parkqr_alert_sound', url);
+    audioRef.current.src = url;
+    setTimeout(() => {
+      audioRef.current.play().catch(e => console.log("Ses oynatılamadı", e));
+    }, 100);
+  };
+
+  const downloadQRCard = async (tag) => {
+    const canvas = document.createElement('canvas');
+    const cardW = 480;
+    const cardH = 640;
+    canvas.width = cardW;
+    canvas.height = cardH;
+    const ctx = canvas.getContext('2d');
+
+    // Background (pure white to save ink, with clean double borders)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cardW, cardH);
+    
+    // Blue border strip like license plate
+    ctx.fillStyle = '#1d4ed8';
+    ctx.fillRect(0, 0, cardW, 12);
+
+    // Draw double border around card
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 22, cardW - 20, cardH - 32);
+
+    // App Title and branding
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🅿 ParkQR', cardW / 2, 70);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '14px Arial, sans-serif';
+    ctx.fillText('Araç sahibine ulaşmak için bu kodu taratın', cardW / 2, 100);
+
+    // QR Code SVG resolution to Canvas
+    const svgEl = document.querySelector(`.qr-box-container-${tag.tagId} svg`);
+    if (svgEl) {
+      const svgString = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = blobURL;
+      });
+
+      // Draw white rounded box behind QR
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect((cardW - 220) / 2, 130, 220, 220);
+      
+      // Draw border for QR box
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.strokeRect((cardW - 220) / 2, 130, 220, 220);
+
+      // Draw the QR Code image
+      ctx.drawImage(img, (cardW - 200) / 2, 140, 200, 200);
+    } else {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '16px Arial';
+      ctx.fillText('QR Kod SVG Alınamadı. QR Kodu Açın.', cardW / 2, 240);
+    }
+
+    // Draw License Plate representation
+    const plateX = (cardW - 320) / 2;
+    const plateY = 380;
+    const plateW = 320;
+    const plateH = 70;
+
+    // Draw License plate frame
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(plateX, plateY, plateW, plateH);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(plateX, plateY, plateW, plateH);
+
+    // Blue TR rectangle
+    ctx.fillStyle = '#1d4ed8';
+    ctx.fillRect(plateX + 2, plateY + 2, 38, plateH - 4);
+
+    // TR Text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('TR', plateX + 21, plateY + 42);
+
+    // Plate Text
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 36px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(tag.plate, plateX + 180, plateY + 48);
+
+    // Divider line
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(30, 480);
+    ctx.lineTo(cardW - 30, 480);
+    ctx.stroke();
+
+    // Privacy details / Instructions
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 14px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🛡️ GİZLİ NUMARA İLE GÜVENLİ İLETİŞİM', cardW / 2, 515);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Arial, sans-serif';
+    ctx.fillText('Telefon numaranız asla görünmez. ParkQR ile numaranız gizlidir.', cardW / 2, 540);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Arial, sans-serif';
+    ctx.fillText('Bu etiket ParkQR (parkqr-nine.vercel.app) altyapısı ile oluşturulmuştur.', cardW / 2, 580);
+
+    // Download trigger
+    const link = document.createElement('a');
+    link.download = `ParkQR_Yazdir_${tag.plate}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   if (loading) return <div className="glass-card" style={{ textAlign: 'center', padding: '48px' }}><Loader2 className="spinner" size={36} /></div>;
 
   const handleCreateNewTag = () => {
@@ -377,6 +574,42 @@ function Dashboard() {
 
   return (
     <>
+      {/* PWA Install Banner */}
+      {deferredPrompt && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
+          border: '1px solid rgba(99, 102, 241, 0.3)',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div style={{ flex: '1 1 240px' }}>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={16} color="#fbbf24" /> ParkQR'ı Telefona İndir
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#cbd5e1' }}>Tek tıkla ana ekranınıza ekleyin ve anında bildirimleri kaçırmayın.</p>
+          </div>
+          <button 
+            className="btn btn-primary" 
+            style={{ padding: '8px 16px', fontSize: '0.85rem', width: 'auto', background: 'var(--accent-gradient)', height: '36px' }}
+            onClick={async () => {
+              deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              console.log(`User response to install prompt: ${outcome}`);
+              setDeferredPrompt(null);
+            }}
+          >
+            Yükle
+          </button>
+        </div>
+      )}
+
       <div className="glass-card">
         {/* Enable Notifications Box */}
         <div style={{
@@ -499,19 +732,62 @@ function Dashboard() {
                       boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
                       animation: 'fadeIn 0.3s ease-out'
                     }}>
-                      <QRCodeSVG value={`https://parkqr-nine.vercel.app/id/${tag.tagId}`} size={200} />
+                      <div className={`qr-box-container-${tag.tagId}`} style={{ display: 'flex', justifyContent: 'center' }}>
+                        <QRCodeSVG value={`https://parkqr-nine.vercel.app/id/${tag.tagId}`} size={200} />
+                      </div>
                       <p style={{ color: '#0f172a', marginTop: '16px', fontWeight: '700', fontSize: '0.95rem', textAlign: 'center', margin: '16px 0 0 0' }}>
                         Bu karekodu telefon kamerasıyla okutun
                       </p>
-                      <span style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>
-                        Camın içerisinden görünecek şekilde yapıştırın.
-                      </span>
+                      
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '20px', width: '100%' }}>
+                        <button 
+                          onClick={() => downloadQRCard(tag)} 
+                          className="btn btn-primary" 
+                          style={{ fontSize: '0.85rem', flex: 1, padding: '10px 14px', borderRadius: '10px', height: '40px', boxShadow: 'none' }}
+                        >
+                          <Download size={16} /> Yazdırılabilir PNG İndir
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* Ringtone Settings Panel */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '32px'
+        }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Volume2 size={18} color="#6366f1" /> Bildirim Zil Sesi
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {SOUNDS.map(sound => (
+              <label key={sound.url} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', cursor: 'pointer', color: '#cbd5e1' }}>
+                <input
+                  type="radio"
+                  name="alertSound"
+                  checked={alertSound === sound.url}
+                  onChange={() => handleSoundChange(sound.url)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#6366f1' }}
+                />
+                {sound.name}
+              </label>
+            ))}
+          </div>
+          <button 
+            onClick={() => audioRef.current.play().catch(e => console.log(e))} 
+            className="btn btn-outline" 
+            style={{ padding: '8px 16px', fontSize: '0.8rem', width: 'auto', marginTop: '16px', height: '34px', borderRadius: '8px' }}
+          >
+            Sesi Test Et
+          </button>
         </div>
 
         {/* Incoming Calls Section */}
@@ -571,6 +847,21 @@ function Dashboard() {
                     </span>
                   </div>
                   
+                  {notif.message && (
+                    <div style={{
+                      background: 'rgba(244, 63, 94, 0.08)',
+                      border: '1px solid rgba(244, 63, 94, 0.2)',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      color: '#fb7185',
+                      fontSize: '0.88rem',
+                      fontWeight: '600',
+                      marginBottom: '12px'
+                    }}>
+                      Arama Nedeni: {notif.message}
+                    </div>
+                  )}
+
                   <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#cbd5e1', fontWeight: '500' }}>
                     Arayan Numara: <span style={{ color: '#f3f4f6' }}>{notif.senderPhone}</span>
                   </p>
@@ -797,8 +1088,8 @@ function Admin() {
               <div style={{ flex: '1 1 200px' }}>
                 {editingTag === t.id ? (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} placeholder="Plaka" style={{ padding: '8px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100px', height: '36px', background: 'rgba(0,0,0,0.4)', borderRadius: '6px' }} />
-                    <input type="tel" value={editPhoneValue} onChange={(e) => setEditPhoneValue(e.target.value)} placeholder="Telefon" style={{ padding: '8px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '130px', height: '36px', background: 'rgba(0,0,0,0.4)', borderRadius: '6px' }} />
+                    <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} placeholder="Plaka" style={{ padding: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', width: '100px', height: '36px', background: 'rgba(0,0,0,0.4)', borderRadius: '6px' }} />
+                    <input type="tel" value={editPhoneValue} onChange={(e) => setEditPhoneValue(e.target.value)} placeholder="Telefon" style={{ padding: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'white', width: '130px', height: '36px', background: 'rgba(0,0,0,0.4)', borderRadius: '6px' }} />
                     <button onClick={() => handleSavePlate(t.id)} className="btn btn-primary" style={{ padding: '0 8px', width: 'auto', height: '36px', borderRadius: '6px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: 'none' }}><Check size={14} /></button>
                     <button onClick={() => setEditingTag(null)} className="btn btn-danger" style={{ padding: '0 8px', width: 'auto', height: '36px', borderRadius: '6px', background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)', boxShadow: 'none' }}><X size={14} /></button>
                   </div>
