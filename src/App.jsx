@@ -264,8 +264,9 @@ function Dashboard() {
   };
 
   return (
-    <div className="glass-card">
-      <div style={{marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
+    <>
+      <div className="glass-card">
+        <div style={{marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.1)'}}>
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
           <h2>Kayıtlı Araçlarım</h2>
           <button className="btn btn-outline" onClick={handleCreateNewTag} style={{padding: '8px 12px', fontSize: '0.85rem'}}>
@@ -387,7 +388,21 @@ function Dashboard() {
           })}
         </div>
       )}
-    </div>
+      </div>
+
+      <div className="glass-card" style={{marginTop: '20px', textAlign: 'center'}}>
+        <h3 style={{color: 'var(--accent-color)', marginBottom: '12px'}}>ParkQR Nedir?</h3>
+        <p style={{fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '16px'}}>
+          ParkQR, araç sahiplerinin telefon numaralarını araç camında açıkça paylaşmak zorunda kalmadan, tamamen güvenli ve gizli bir şekilde bildirim almalarını sağlayan yeni nesil bir iletişim asistanıdır.
+        </p>
+        <div style={{fontSize: '0.85rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px'}}>
+          <p style={{marginBottom: '8px'}}>Proje Kurucusu ve Geliştirici: <strong>Gökhan Eker</strong></p>
+          <div style={{display: 'flex', justifyContent: 'center', gap: '16px'}}>
+            <a href="https://github.com/gokhanekerai/parkqr" target="_blank" rel="noreferrer" style={{color: 'var(--accent-color)', textDecoration: 'none'}}>Proje Kodları (GitHub)</a>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
