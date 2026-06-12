@@ -110,8 +110,9 @@ function ScanTag() {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
-        <small style={{display: 'block', marginTop: '8px', color: 'var(--text-secondary)'}}>
-          * Numaranız sadece araç sahibine bildirilecektir.
+        <small style={{display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', color: '#10b981', textAlign: 'left', lineHeight: '1.4'}}>
+          <ShieldCheck size={16} style={{flexShrink: 0}} /> 
+          Numaranız araç sahibinin paneline şifreli olarak iletilir. Araç sahibi %100 gizli kalır.
         </small>
       </div>
       
@@ -170,7 +171,10 @@ function ActivateTag() {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
-        <small style={{display: 'block', marginTop: '8px', color: 'var(--text-secondary)'}}>Sistemden SMS ile acil bildirim alabilmeniz için gereklidir.</small>
+        <small style={{display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', color: '#10b981', textAlign: 'left', lineHeight: '1.4'}}>
+          <ShieldCheck size={16} style={{flexShrink: 0}} /> 
+          Telefonunuz 256-bit ile şifrelenir. Yoldan geçen vatandaşlar barkodu okutsa bile numaranızı ASLA göremez.
+        </small>
       </div>
       
       <button 
@@ -484,10 +488,24 @@ function Dashboard() {
       </div>
 
       <div className="glass-card" style={{marginTop: '20px', textAlign: 'center'}}>
-        <h3 style={{color: 'var(--accent-color)', marginBottom: '12px'}}>ParkQR Nedir?</h3>
-        <p style={{fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '16px'}}>
-          ParkQR, araç sahiplerinin telefon numaralarını araç camında açıkça paylaşmak zorunda kalmadan, tamamen güvenli ve gizli bir şekilde bildirim almalarını sağlayan yeni nesil bir iletişim asistanıdır.
-        </p>
+        <h3 style={{color: 'var(--accent-color)', marginBottom: '16px'}}>Neden ParkQR? (Tam Gizlilik)</h3>
+        
+        <div style={{textAlign: 'left', background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '12px', marginBottom: '20px'}}>
+          <ul style={{margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <li style={{display: 'flex', gap: '12px', alignItems: 'flex-start'}}>
+              <ShieldCheck size={20} color="#10b981" style={{flexShrink: 0, marginTop: '2px'}} />
+              <p style={{margin: 0, fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5'}}><strong>Siz Gizli Kalırsınız:</strong> Aracınıza barkod okutulduğunda vatandaş telefon numaranızı asla göremez.</p>
+            </li>
+            <li style={{display: 'flex', gap: '12px', alignItems: 'flex-start'}}>
+              <ShieldCheck size={20} color="#10b981" style={{flexShrink: 0, marginTop: '2px'}} />
+              <p style={{margin: 0, fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5'}}><strong>Arama Kontrolü Sizde:</strong> Çağrı aldığınızda panelinizden tek tuşla <strong>"Gizli Numaradan Ara"</strong> diyerek kendi numaranızı saklayıp vatandaşı arayabilirsiniz.</p>
+            </li>
+            <li style={{display: 'flex', gap: '12px', alignItems: 'flex-start'}}>
+              <ShieldCheck size={20} color="#10b981" style={{flexShrink: 0, marginTop: '2px'}} />
+              <p style={{margin: 0, fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5'}}><strong>Rahatsızlıklara Son:</strong> Gece yarıları sapıklar tarafından aranma veya numaranızın reklamcıların eline geçme derdi biter.</p>
+            </li>
+          </ul>
+        </div>
         <div style={{fontSize: '0.85rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px'}}>
           <p style={{marginBottom: '8px'}}>Proje Kurucusu ve Geliştirici: <strong>Gökhan Eker</strong></p>
           <div style={{display: 'flex', justifyContent: 'center', gap: '16px'}}>
