@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord } from './firebase';
+import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagPlate } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -66,15 +66,16 @@ function ScanTag() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    getTagById(tagId).then(data => {
-      if (!data) {
-        // Tag yoksa aktifleştirme sayfasına yönlendir
+    const fetchTag = async () => {
+      const tag = await getTagById(tagId);
+      if (!tag) {
         navigate(`/activate/${tagId}`);
-      } else {
-        setTag(data);
+        return;
       }
+      setTag(tag);
       setLoading(false);
-    });
+    };
+    fetchTag();
   }, [tagId, navigate]);
 
   const handleSend = async () => {
@@ -264,6 +265,13 @@ function Dashboard() {
     navigate(`/activate/${randomId}`);
   };
 
+  const handleEditPlate = async (tag) => {
+    const newPlate = window.prompt("Yeni plakayı girin:", tag.plate);
+    if (newPlate && newPlate.trim() !== "" && newPlate !== tag.plate) {
+      await updateTagPlate(tag.id, newPlate.trim().toUpperCase());
+    }
+  };
+
   return (
     <>
       <div className="glass-card">
@@ -287,7 +295,10 @@ function Dashboard() {
                 borderLeft: '4px solid #3b82f6'
               }}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                    <button onClick={() => handleEditPlate(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                  </div>
                   <button className="btn btn-primary" style={{padding: '6px 12px', fontSize: '0.8rem', minWidth: 'auto'}} onClick={() => setShowQR(showQR === tag.tagId ? null : tag.tagId)}>
                     {showQR === tag.tagId ? 'Gizle' : 'QR Göster'}
                   </button>
@@ -435,8 +446,16 @@ function Admin() {
   };
 
   const handleDeleteTag = async (id) => {
-    if(window.confirm('Bu etiketi silmek istediğinize emin misiniz?')) {
+    if(window.confirm('Bu etiketi silmek (boşa çıkarmak) istediğinize emin misiniz?')) {
       await deleteTagRecord(id);
+      fetchData();
+    }
+  };
+
+  const handleEditTag = async (tag) => {
+    const newPlate = window.prompt("Yeni plakayı girin:", tag.plate);
+    if (newPlate && newPlate.trim() !== "" && newPlate !== tag.plate) {
+      await updateTagPlate(tag.id, newPlate.trim().toUpperCase());
       fetchData();
     }
   };
@@ -487,7 +506,10 @@ function Admin() {
                 <strong style={{color: 'white'}}>{t.plate}</strong>
                 <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
               </div>
-              <button onClick={() => handleDeleteTag(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil</button>
+              <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                <button onClick={() => handleEditTag(t)} style={{background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Düzenle</button>
+                <button onClick={() => handleDeleteTag(t.id)} style={{background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 8px', textDecoration: 'underline'}}>Sil (Boşa Çıkar)</button>
+              </div>
             </div>
           ))}
           {tags.length === 0 && <p style={{color: '#94a3b8'}}>Henüz kayıtlı etiket yok.</p>}

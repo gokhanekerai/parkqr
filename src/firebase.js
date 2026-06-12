@@ -55,3 +55,9 @@ export const createNotification = async (plate, senderPhone, ownerUid) => {
 export const deleteTagRecord = async (docId) => {
   await deleteDoc(doc(db, "tags", docId));
 };
+
+export const updateTagPlate = async (docId, newPlate) => {
+  await updateDoc(doc(db, "tags", docId), {
+    plate: newPlate
+  });
+};
