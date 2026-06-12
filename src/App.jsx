@@ -1219,7 +1219,7 @@ function Admin() {
     let cardsHtml = '';
     generatedTags.forEach((tagId) => {
       const qrUrl = `https://parkqr-nine.vercel.app/id/${tagId}`;
-      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrUrl)}`;
       
       cardsHtml += `
         <div class="print-card">
@@ -1228,7 +1228,7 @@ function Admin() {
           <div class="card-subtitle">Bu araca ulaşmak için karekodu taratın</div>
           
           <div class="qr-box">
-            <img src="${qrImgUrl}" alt="QR Code" width="130" height="130" />
+            <img src="${qrImgUrl}" alt="QR Code" width="100" height="100" />
           </div>
           
           <div class="plate-placeholder">
@@ -1267,7 +1267,7 @@ function Admin() {
             }
             .print-card {
               border: 2px dashed #94a3b8;
-              padding: 16px;
+              padding: 10px 14px;
               text-align: center;
               position: relative;
               background: #ffffff;
@@ -1276,7 +1276,7 @@ function Admin() {
               display: flex;
               flex-direction: column;
               align-items: center;
-              height: 350px;
+              height: 290px;
               page-break-inside: avoid;
             }
             .top-bar {
@@ -1284,29 +1284,29 @@ function Admin() {
               top: 0;
               left: 0;
               right: 0;
-              height: 6px;
+              height: 5px;
               background: #1d4ed8;
               border-top-left-radius: 7px;
               border-top-right-radius: 7px;
             }
             .card-logo {
-              font-size: 16px;
+              font-size: 14px;
               font-weight: 800;
               color: #0f172a;
-              margin-bottom: 2px;
+              margin-bottom: 1px;
             }
             .card-subtitle {
-              font-size: 10px;
+              font-size: 9px;
               color: #64748b;
-              margin-bottom: 8px;
+              margin-bottom: 4px;
             }
             .qr-box {
               display: inline-flex;
-              padding: 6px;
+              padding: 4px;
               background: #f8fafc;
               border: 1px solid #e2e8f0;
-              border-radius: 6px;
-              margin-bottom: 8px;
+              border-radius: 5px;
+              margin-bottom: 4px;
             }
             .plate-placeholder {
               display: inline-flex;
@@ -1316,10 +1316,10 @@ function Admin() {
               border-radius: 5px;
               overflow: hidden;
               font-weight: 800;
-              font-size: 13px;
+              font-size: 11px;
               color: #94a3b8;
-              height: 32px;
-              margin-bottom: 10px;
+              height: 26px;
+              margin-bottom: 6px;
               box-sizing: border-box;
               border-style: dashed;
             }
@@ -1332,29 +1332,29 @@ function Admin() {
               align-items: center;
               justify-content: center;
               height: 100%;
-              width: 20px;
+              width: 18px;
             }
             .plate-text {
-              padding: 0 12px;
+              padding: 0 10px;
               letter-spacing: 0.5px;
             }
             .steps-box {
               background: #f8fafc;
               border: 1px solid #f1f5f9;
-              border-radius: 6px;
-              padding: 8px 12px;
+              border-radius: 5px;
+              padding: 6px 10px;
               text-align: left;
               width: 100%;
               box-sizing: border-box;
-              margin-bottom: 10px;
+              margin-bottom: 6px;
             }
             .step-item {
-              font-size: 9px;
+              font-size: 8px;
               color: #475569;
-              margin-bottom: 4px;
+              margin-bottom: 3px;
               display: flex;
               align-items: center;
-              gap: 6px;
+              gap: 5px;
               line-height: 1.2;
             }
             .step-item:last-child {
@@ -1364,21 +1364,21 @@ function Admin() {
               background: #1d4ed8;
               color: white;
               font-weight: 700;
-              width: 12px;
-              height: 12px;
+              width: 11px;
+              height: 11px;
               border-radius: 50%;
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              font-size: 7px;
+              font-size: 6px;
               flex-shrink: 0;
             }
             .privacy-badge {
-              font-size: 9px;
+              font-size: 8.5px;
               font-weight: 700;
               color: #0f766e;
               background: #f0fdf4;
-              padding: 3px 8px;
+              padding: 2px 6px;
               border-radius: 5px;
               border: 1px solid #ccfbf1;
             }
