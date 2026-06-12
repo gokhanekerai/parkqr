@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Loader2, BellRing, MessageCircle, Phone } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagPlate } from './firebase';
+import { db, auth, getTagById, activateTag, createNotification, deleteTagRecord, updateTagInfo } from './firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -130,6 +130,7 @@ function ActivateTag() {
   const { tagId } = useParams();
   const navigate = useNavigate();
   const [plate, setPlate] = useState('');
+  const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
   const handleActivate = async () => {
@@ -138,7 +139,7 @@ function ActivateTag() {
     
     // Anonim kullanıcı ile eşleştir
     const uid = auth.currentUser ? auth.currentUser.uid : 'temp-user';
-    await activateTag(tagId, plate, uid);
+    await activateTag(tagId, plate, uid, phone);
     
     setSaving(false);
     alert('Harika! QR kodunuz başarıyla plakanızla eşleşti.');
@@ -160,6 +161,17 @@ function ActivateTag() {
           onChange={(e) => setPlate(e.target.value)}
         />
       </div>
+
+      <div className="form-group" style={{marginTop: '16px'}}>
+        <label>Telefon Numaranız (Opsiyonel):</label>
+        <input 
+          type="tel" 
+          placeholder="05XX XXX XX XX" 
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <small style={{display: 'block', marginTop: '8px', color: 'var(--text-secondary)'}}>Sistemden SMS ile acil bildirim alabilmeniz için gereklidir.</small>
+      </div>
       
       <button 
         className="btn btn-primary" 
@@ -179,6 +191,7 @@ function Dashboard() {
   const [showQR, setShowQR] = useState(null);
   const [editingTag, setEditingTag] = useState(null);
   const [editPlateValue, setEditPlateValue] = useState("");
+  const [editPhoneValue, setEditPhoneValue] = useState("");
   const navigate = useNavigate();
   const audioRef = useRef(null);
   
@@ -270,11 +283,12 @@ function Dashboard() {
   const handleEditPlateClick = (tag) => {
     setEditingTag(tag.id);
     setEditPlateValue(tag.plate);
+    setEditPhoneValue(tag.ownerPhone || "");
   };
 
   const handleSavePlate = async (tagId) => {
     if (editPlateValue.trim() !== "") {
-      await updateTagPlate(tagId, editPlateValue.trim().toUpperCase());
+      await updateTagInfo(tagId, editPlateValue.trim().toUpperCase(), editPhoneValue.trim());
     }
     setEditingTag(null);
   };
@@ -304,16 +318,20 @@ function Dashboard() {
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                     {editingTag === tag.id ? (
-                      <div style={{display: 'flex', gap: '8px'}}>
-                        <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '100px'}} />
+                      <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                        <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} placeholder="Plaka" style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '90px'}} />
+                        <input type="tel" value={editPhoneValue} onChange={(e) => setEditPhoneValue(e.target.value)} placeholder="Telefon" style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '110px'}} />
                         <button onClick={() => handleSavePlate(tag.id)} style={{background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>Kaydet</button>
                         <button onClick={() => setEditingTag(null)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>İptal</button>
                       </div>
                     ) : (
-                      <>
-                        <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
-                        <button onClick={() => handleEditPlateClick(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
-                      </>
+                      <div style={{display: 'flex', flexDirection: 'column'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <strong style={{color: 'white', fontSize: '1.1rem'}}>{tag.plate}</strong>
+                          <button onClick={() => handleEditPlateClick(tag)} style={{background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>Düzenle</button>
+                        </div>
+                        {tag.ownerPhone && <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>Tel: {tag.ownerPhone}</span>}
+                      </div>
                     )}
                   </div>
                   <button className="btn btn-primary" style={{padding: '6px 12px', fontSize: '0.8rem', minWidth: 'auto'}} onClick={() => setShowQR(showQR === tag.tagId ? null : tag.tagId)}>
@@ -443,6 +461,7 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [editPlateValue, setEditPlateValue] = useState("");
+  const [editPhoneValue, setEditPhoneValue] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const handleLogin = (e) => {
@@ -474,11 +493,12 @@ function Admin() {
   const handleEditClick = (tag) => {
     setEditingTag(tag.id);
     setEditPlateValue(tag.plate);
+    setEditPhoneValue(tag.ownerPhone || "");
   };
 
   const handleSavePlate = async (tagId) => {
     if (editPlateValue.trim() !== "") {
-      await updateTagPlate(tagId, editPlateValue.trim().toUpperCase());
+      await updateTagInfo(tagId, editPlateValue.trim().toUpperCase(), editPhoneValue.trim());
       fetchData();
     }
     setEditingTag(null);
@@ -528,16 +548,20 @@ function Admin() {
             <div key={t.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '8px'}}>
               <div>
                 {editingTag === t.id ? (
-                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                    <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '100px'}} />
+                  <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
+                    <input type="text" value={editPlateValue} onChange={(e) => setEditPlateValue(e.target.value)} placeholder="Plaka" style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '90px'}} />
+                    <input type="tel" value={editPhoneValue} onChange={(e) => setEditPhoneValue(e.target.value)} placeholder="Telefon" style={{padding: '4px', borderRadius: '4px', border: '1px solid #ccc', color: 'black', width: '110px'}} />
                     <button onClick={() => handleSavePlate(t.id)} style={{background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>Kaydet</button>
                     <button onClick={() => setEditingTag(null)} style={{background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem'}}>İptal</button>
                   </div>
                 ) : (
-                  <>
-                    <strong style={{color: 'white'}}>{t.plate}</strong>
-                    <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
-                  </>
+                  <div style={{display: 'flex', flexDirection: 'column'}}>
+                    <div>
+                      <strong style={{color: 'white'}}>{t.plate}</strong>
+                      <span style={{color: '#94a3b8', fontSize: '0.8rem', marginLeft: '12px'}}>ID: {t.tagId}</span>
+                    </div>
+                    {t.ownerPhone && <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>Sahip Tel: {t.ownerPhone}</span>}
+                  </div>
                 )}
               </div>
               <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>

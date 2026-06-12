@@ -23,19 +23,20 @@ export const getTagById = async (tagId) => {
   return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 };
 
-export const activateTag = async (tagId, plate, uid) => {
+export const activateTag = async (tagId, plate, uid, ownerPhone = "") => {
   // Önce tag var mı bakalım, yoksa oluşturalım
   const existing = await getTagById(tagId);
   if (existing) {
     // Güncelle
     const tagRef = doc(db, "tags", existing.id);
-    await updateDoc(tagRef, { plate, ownerUid: uid, status: 'active' });
+    await updateDoc(tagRef, { plate: plate.toUpperCase(), ownerUid: uid, ownerPhone, status: 'active' });
   } else {
     // Yeni ekle
     await addDoc(collection(db, "tags"), {
       tagId,
       plate: plate.toUpperCase(),
       ownerUid: uid,
+      ownerPhone,
       status: 'active',
       createdAt: new Date().toISOString()
     });
@@ -56,8 +57,9 @@ export const deleteTagRecord = async (docId) => {
   await deleteDoc(doc(db, "tags", docId));
 };
 
-export const updateTagPlate = async (docId, newPlate) => {
+export const updateTagInfo = async (docId, newPlate, newPhone) => {
   await updateDoc(doc(db, "tags", docId), {
-    plate: newPlate
+    plate: newPlate,
+    ownerPhone: newPhone || ""
   });
 };
