@@ -313,6 +313,8 @@ function Dashboard() {
   const navigate = useNavigate();
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const audioRef = useRef(null);
+  const [giftModalUrl, setGiftModalUrl] = useState(null);
+  const [copiedGift, setCopiedGift] = useState(false);
   
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -800,11 +802,24 @@ function Dashboard() {
 
         {/* Registered Cars Section */}
         <div style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
             <h2>Kayıtlı Araçlarım</h2>
-            <button className="btn btn-outline" onClick={handleCreateNewTag} style={{ padding: '8px 16px', fontSize: '0.85rem', width: 'auto' }}>
-              <Plus size={16} /> Yeni Ekle
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => {
+                  const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+                  setGiftModalUrl(`https://parkqr-nine.vercel.app/activate/${randomId}`);
+                  setCopiedGift(false);
+                }} 
+                style={{ padding: '8px 16px', fontSize: '0.85rem', width: 'auto', color: '#fbbf24', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)' }}
+              >
+                🎁 Hediye Et
+              </button>
+              <button className="btn btn-outline" onClick={handleCreateNewTag} style={{ padding: '8px 16px', fontSize: '0.85rem', width: 'auto' }}>
+                <Plus size={16} /> Yeni Ekle
+              </button>
+            </div>
           </div>
           
           {tags.length === 0 ? (
@@ -1148,6 +1163,60 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Gift Modal Popup */}
+      {giftModalUrl && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(6, 8, 20, 0.85)', backdropFilter: 'blur(16px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="glass-card" style={{ margin: '20px', textAlign: 'center', maxWidth: '360px', padding: '32px 24px', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '50%', marginBottom: '16px' }}>
+              <span style={{ fontSize: '32px' }}>🎁</span>
+            </div>
+            <h3 style={{ color: '#fbbf24', marginBottom: '12px', fontSize: '1.25rem' }}>Hediye Bağlantısı Hazır!</h3>
+            <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '20px', lineHeight: '1.5' }}>
+              Aşağıdaki bağlantıyı arkadaşınızla paylaşarak ona özel bir ParkQR cam kartı hediye edebilirsiniz. Bağlantıyı açtığında kendi plaka ve telefonunu tanımlayacaktır.
+            </p>
+            
+            <input 
+              type="text" 
+              readOnly 
+              value={giftModalUrl} 
+              style={{ textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', marginBottom: '16px', height: '44px', fontSize: '0.85rem' }}
+              onClick={(e) => e.target.select()}
+            />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(`Merhaba! Sana ParkQR araç cam kartı hediye etmek istiyorum. Bu bağlantıya tıklayıp plakanı ve telefonunu girerek kendi QR kodunu saniyeler içinde ücretsiz oluşturabilirsin: ${giftModalUrl}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn"
+                style={{ background: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)', color: 'white', fontSize: '0.9rem', height: '42px', boxShadow: 'none' }}
+              >
+                <MessageSquare size={16} /> WhatsApp ile Gönder
+              </a>
+              
+              <button 
+                className="btn btn-outline" 
+                onClick={() => {
+                  navigator.clipboard.writeText(giftModalUrl);
+                  setCopiedGift(true);
+                }} 
+                style={{ fontSize: '0.9rem', height: '42px' }}
+              >
+                {copiedGift ? 'Kopyalandı! ✓' : 'Bağlantıyı Kopyala'}
+              </button>
+              
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setGiftModalUrl(null)} 
+                style={{ fontSize: '0.9rem', height: '42px', borderColor: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
