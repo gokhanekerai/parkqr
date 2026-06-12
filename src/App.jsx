@@ -678,7 +678,7 @@ function Dashboard() {
             <li style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
               <ShieldCheck size={20} color="#34d399" style={{ flexShrink: 0, marginTop: '2px' }} />
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-                <strong>Rahatsızlıklara Son:</strong> Gece yarıları istenmeyen kişiler tarafından aranma veya numaranızın reklamcıların eline geçme derdi biter.
+                <strong>Rahatsızlıklara Son:</strong> İstenmeyen kişiler telefon numaranıza ulaşamaz.
               </p>
             </li>
           </ul>
