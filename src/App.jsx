@@ -1157,6 +1157,8 @@ function Admin() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [giftModalUrl, setGiftModalUrl] = useState(null);
   const [copiedGift, setCopiedGift] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkCount, setBulkCount] = useState(100);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -1198,6 +1200,216 @@ function Admin() {
     setEditingTag(null);
   };
 
+  const handleBulkGenerateAndPrint = () => {
+    const count = parseInt(bulkCount) || 100;
+    if (count <= 0 || count > 200) {
+      alert("Lütfen 1 ile 200 arasında bir adet girin.");
+      return;
+    }
+
+    const generatedTags = [];
+    for (let i = 0; i < count; i++) {
+      const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      generatedTags.push(randomId);
+    }
+
+    const printWindow = window.open('', '_blank');
+    
+    // Construct HTML content for printable tags
+    let cardsHtml = '';
+    generatedTags.forEach((tagId) => {
+      const qrUrl = `https://parkqr-nine.vercel.app/id/${tagId}`;
+      const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+      
+      cardsHtml += `
+        <div class="print-card">
+          <div class="top-bar"></div>
+          <div class="card-logo">🅿 ParkQR</div>
+          <div class="card-subtitle">Bu araca ulaşmak için karekodu taratın</div>
+          
+          <div class="qr-box">
+            <img src="${qrImgUrl}" alt="QR Code" width="130" height="130" />
+          </div>
+          
+          <div class="plate-placeholder">
+            <div class="plate-tr">TR</div>
+            <div class="plate-text">PLAKANIZI YAZIN</div>
+          </div>
+          
+          <div class="steps-box">
+            <div class="step-item"><span>1</span> Kameranla tarat ve aktifleştir</div>
+            <div class="step-item"><span>2</span> Plakanı ve telefonunu eşleştir</div>
+            <div class="step-item"><span>3</span> Cama yapıştır, anında bildirim al!</div>
+          </div>
+          
+          <div class="privacy-badge">🛡️ Gizli Numara • Güvenli İletişim</div>
+        </div>
+      `;
+    });
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>ParkQR - Toplu Aktivasyon Kartları</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+            body {
+              margin: 0;
+              padding: 20px;
+              font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+              background: #ffffff;
+            }
+            .grid-container {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              row-gap: 24px;
+            }
+            .print-card {
+              border: 2px dashed #94a3b8;
+              padding: 16px;
+              text-align: center;
+              position: relative;
+              background: #ffffff;
+              box-sizing: border-box;
+              border-radius: 10px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              height: 350px;
+              page-break-inside: avoid;
+            }
+            .top-bar {
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 6px;
+              background: #1d4ed8;
+              border-top-left-radius: 7px;
+              border-top-right-radius: 7px;
+            }
+            .card-logo {
+              font-size: 16px;
+              font-weight: 800;
+              color: #0f172a;
+              margin-bottom: 2px;
+            }
+            .card-subtitle {
+              font-size: 10px;
+              color: #64748b;
+              margin-bottom: 8px;
+            }
+            .qr-box {
+              display: inline-flex;
+              padding: 6px;
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 6px;
+              margin-bottom: 8px;
+            }
+            .plate-placeholder {
+              display: inline-flex;
+              align-items: center;
+              background: #ffffff;
+              border: 2px solid #94a3b8;
+              border-radius: 5px;
+              overflow: hidden;
+              font-weight: 800;
+              font-size: 13px;
+              color: #94a3b8;
+              height: 32px;
+              margin-bottom: 10px;
+              box-sizing: border-box;
+              border-style: dashed;
+            }
+            .plate-tr {
+              background: #94a3b8;
+              color: #ffffff;
+              font-size: 8px;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100%;
+              width: 20px;
+            }
+            .plate-text {
+              padding: 0 12px;
+              letter-spacing: 0.5px;
+            }
+            .steps-box {
+              background: #f8fafc;
+              border: 1px solid #f1f5f9;
+              border-radius: 6px;
+              padding: 8px 12px;
+              text-align: left;
+              width: 100%;
+              box-sizing: border-box;
+              margin-bottom: 10px;
+            }
+            .step-item {
+              font-size: 9px;
+              color: #475569;
+              margin-bottom: 4px;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              line-height: 1.2;
+            }
+            .step-item:last-child {
+              margin-bottom: 0;
+            }
+            .step-item span {
+              background: #1d4ed8;
+              color: white;
+              font-weight: 700;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 7px;
+              flex-shrink: 0;
+            }
+            .privacy-badge {
+              font-size: 9px;
+              font-weight: 700;
+              color: #0f766e;
+              background: #f0fdf4;
+              padding: 3px 8px;
+              border-radius: 5px;
+              border: 1px solid #ccfbf1;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .print-card {
+                border: 2px solid #000000;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="grid-container">
+            ${cardsHtml}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setShowBulkModal(false);
+  };
+
   if (!authed) {
     return (
       <div className="glass-card" style={{ textAlign: 'center', maxWidth: '400px', margin: '0 auto', padding: '36px 24px' }}>
@@ -1224,6 +1436,15 @@ function Admin() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <h2>Admin Paneli</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="btn btn-outline" 
+            onClick={() => {
+              setShowBulkModal(true);
+            }} 
+            style={{ padding: '8px 16px', fontSize: '0.8rem', width: 'auto', color: '#6366f1', borderColor: '#6366f1', background: 'rgba(99, 102, 241, 0.05)', height: '34px' }}
+          >
+            🖨️ Toplu QR Kartı Üret
+          </button>
           <button 
             className="btn btn-outline" 
             onClick={() => {
@@ -1346,6 +1567,53 @@ function Admin() {
                 style={{ fontSize: '0.9rem', height: '42px', borderColor: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
               >
                 Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showBulkModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(6, 8, 20, 0.85)', backdropFilter: 'blur(16px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="glass-card" style={{ margin: '20px', textAlign: 'center', maxWidth: '360px', padding: '32px 24px', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', marginBottom: '16px' }}>
+              <span style={{ fontSize: '32px' }}>🖨️</span>
+            </div>
+            <h3 style={{ color: '#818cf8', marginBottom: '12px', fontSize: '1.25rem' }}>Toplu QR Kartı Üret</h3>
+            <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '20px', lineHeight: '1.5' }}>
+              Dağıtmak veya bastırmak üzere belirtilen adette benzersiz QR kod içeren basıma hazır etiket şablonu oluşturun.
+            </p>
+            
+            <div className="form-group" style={{ marginBottom: '20px', textAlign: 'left' }}>
+              <label style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Kaç Adet QR Üretilsin?</label>
+              <input 
+                type="number" 
+                min="1" 
+                max="200" 
+                value={bulkCount} 
+                onChange={(e) => setBulkCount(e.target.value)}
+                style={{ textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', height: '44px', fontSize: '1rem', marginTop: '6px' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '6px', textAlign: 'center' }}>
+                (Tek seferde maksimum 200 adet önerilir)
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleBulkGenerateAndPrint} 
+                style={{ flex: 1, background: 'var(--accent-gradient)', fontSize: '0.9rem', height: '42px' }}
+              >
+                Üret ve Yazdır
+              </button>
+              
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setShowBulkModal(false)} 
+                style={{ flex: 1, fontSize: '0.9rem', height: '42px', borderColor: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
+              >
+                İptal
               </button>
             </div>
           </div>
